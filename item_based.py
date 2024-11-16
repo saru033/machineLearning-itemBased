@@ -2,6 +2,12 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.metrics import mean_squared_error, mean_absolute_error, precision_score, recall_score
+import matplotlib.pyplot as plt
+
+rmse_list = []
+mae_list = []
+precision_list = []
+recall_list = []
 
 sample_size = 20000
 num_sample = 10
@@ -70,6 +76,10 @@ def evaluate_recommendations(test_data, predicted_ratings):
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
     mae = mean_absolute_error(y_true, y_pred)
 
+    # Store metrics for visualization
+    rmse_list.append(rmse)
+    mae_list.append(mae)
+
     print(f"RMSE: {rmse}")
     print(f"MAE: {mae}")
 
@@ -80,6 +90,10 @@ def evaluate_recommendations(test_data, predicted_ratings):
 
     precision = precision_score(y_true_binary, y_pred_binary, zero_division=0)
     recall = recall_score(y_true_binary, y_pred_binary, zero_division=0)
+
+    # Store metrics for visualization
+    precision_list.append(precision)
+    recall_list.append(recall)
 
     print(f"Precision: {precision}")
     print(f"Recall: {recall}")
@@ -112,9 +126,39 @@ def sampling_items_based(s, num_recommendations=5):
     match_recipes(value, all_similar_items)
 
 
+def plot_combined_metrics_bar():
+    # Metric names and corresponding values
+    metrics = ['RMSE', 'MAE', 'Precision', 'Recall']
+    values = [
+        np.mean(rmse_list),  # 평균 RMSE
+        np.mean(mae_list),  # 평균 MAE
+        np.mean(precision_list),  # 평균 Precision
+        np.mean(recall_list)  # 평균 Recall
+    ]
+
+    # Plot the bar chart
+    plt.figure(figsize=(8, 6))
+    bars = plt.bar(metrics, values, color=['skyblue', 'lightgreen', 'salmon', 'gold'], edgecolor='black')
+
+    # Annotate each bar with its value
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width() / 2, height + 0.01, f"{height:.3f}", ha='center', va='bottom')
+
+    # Customize the plot
+    plt.title("Performance Metrics")
+    plt.ylabel("Value")
+    plt.ylim(0, max(values) + 0.1)
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+    plt.show()
+
+
 # Run sampling and evaluation
 sampling_items_based(s=num_sample)
 
+# Plot the metrics as bar graphs
+plot_combined_metrics_bar()
 
 
 
