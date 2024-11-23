@@ -1,13 +1,11 @@
 import numpy as np
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.metrics import mean_squared_error, mean_absolute_error, precision_score, recall_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 import matplotlib.pyplot as plt
 
 rmse_list = []
 mae_list = []
-precision_list = []
-recall_list = []
 
 sample_size = 20000
 num_sample = 10
@@ -47,12 +45,12 @@ def items_based(user_id, df, num_recommendations=5):
         # Sorting
         similar_items = similar_items.sort_values(ascending=False)
         # Exclude items that have already been rated
-        similar_items = similar_items[~similar_items.index.isin(user_ratings[user_ratings > 0].index)]
+        #similar_items = similar_items[~similar_items.index.isin(user_ratings[user_ratings > 0].index)]
 
-        return similar_items.head(num_recommendations)
+        return similar_items
     else:
         similar_items = pd.Series(dtype=float)
-        return similar_items.head(num_recommendations)
+        return similar_items
 
 
 def evaluate_recommendations(test_data, predicted_ratings):
@@ -83,21 +81,6 @@ def evaluate_recommendations(test_data, predicted_ratings):
     print(f"RMSE: {rmse}")
     print(f"MAE: {mae}")
 
-    # Precision and Recall
-    # Convert ratings to binary (relevant if rating >= 4)
-    y_true_binary = (y_true >= 4).astype(int)
-    y_pred_binary = (y_pred >= 4).astype(int)
-
-    precision = precision_score(y_true_binary, y_pred_binary, zero_division=0)
-    recall = recall_score(y_true_binary, y_pred_binary, zero_division=0)
-
-    # Store metrics for visualization
-    precision_list.append(precision)
-    recall_list.append(recall)
-
-    print(f"Precision: {precision}")
-    print(f"Recall: {recall}")
-
 
 def sampling_items_based(s, num_recommendations=5):
     all_similar_items = pd.Series(dtype=float)
@@ -109,11 +92,15 @@ def sampling_items_based(s, num_recommendations=5):
         # Since not all user IDs are used during the sampling process, select from the sampled users.
         if i == 0:
             value = sample_df.iloc[0, 0]
+            user_rows = df0[df0['user_id'] == value]
+            sample_df = pd.concat([sample_df, user_rows])
+        else:
+            sample_df = pd.concat([sample_df, user_rows])
 
         similar_items = items_based(value, sample_df, num_recommendations)
 
         all_similar_items = pd.concat([all_similar_items, similar_items])
-
+        all_similar_items = all_similar_items.groupby(all_similar_items.index).mean()
     # Sorting
     all_similar_items = all_similar_items.sort_values(ascending=False)
 
@@ -128,17 +115,15 @@ def sampling_items_based(s, num_recommendations=5):
 
 def plot_combined_metrics_bar():
     # Metric names and corresponding values
-    metrics = ['RMSE', 'MAE', 'Precision', 'Recall']
+    metrics = ['RMSE', 'MAE']
     values = [
         np.mean(rmse_list),  # 평균 RMSE
-        np.mean(mae_list),  # 평균 MAE
-        np.mean(precision_list),  # 평균 Precision
-        np.mean(recall_list)  # 평균 Recall
+        np.mean(mae_list)  # 평균 MAE
     ]
 
     # Plot the bar chart
     plt.figure(figsize=(8, 6))
-    bars = plt.bar(metrics, values, color=['skyblue', 'lightgreen', 'salmon', 'gold'], edgecolor='black')
+    bars = plt.bar(metrics, values, color=['skyblue', 'lightgreen'], edgecolor='black')
 
     # Annotate each bar with its value
     for bar in bars:
@@ -146,7 +131,7 @@ def plot_combined_metrics_bar():
         plt.text(bar.get_x() + bar.get_width() / 2, height + 0.01, f"{height:.3f}", ha='center', va='bottom')
 
     # Customize the plot
-    plt.title("Performance Metrics")
+    plt.title(f"When sample_size = {sample_size} and num_sample = {num_sample}")
     plt.ylabel("Value")
     plt.ylim(0, max(values) + 0.1)
     plt.grid(axis='y', linestyle='--', alpha=0.7)
@@ -158,7 +143,7 @@ def plot_combined_metrics_bar():
 sampling_items_based(s=num_sample)
 
 # Plot the metrics as bar graphs
-plot_combined_metrics_bar()
-
-
-
+if rmse_list and mae_list:  # 둘 다 비어있지 않을 때만 실행
+    plot_combined_metrics_bar()
+else:
+    print("No data available to plot. Both RMSE and MAE lists are empty.")
